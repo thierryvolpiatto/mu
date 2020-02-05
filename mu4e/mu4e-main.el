@@ -257,7 +257,8 @@ When REFRESH is non nil refresh infos from server."
   (setq smtpmail-queue-mail (not smtpmail-queue-mail))
   (message (concat "Outgoing mail will now be "
 		         (if smtpmail-queue-mail "queued" "sent directly")))
-  (unless (eq mu4e-split-view 'single-window)
+  (unless (or (eq mu4e-split-view 'single-window)
+              (not (buffer-live-p (get-buffer mu4e~main-buffer-name))))
     (with-current-buffer mu4e~main-buffer-name
       (revert-buffer))))
 
