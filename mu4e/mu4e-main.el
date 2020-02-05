@@ -59,7 +59,6 @@
     (define-key map "A" 'mu4e-about)
     (define-key map "N" 'mu4e-news)
     (define-key map "H" 'mu4e-display-manual)
-    (define-key map "g" 'mu4e)
     map)
 
   "Keymap for the *mu4e-main* buffer.")
@@ -69,7 +68,6 @@
 (define-derived-mode mu4e-main-mode special-mode "mu4e:main"
   "Major mode for the mu4e main screen.
 \\{mu4e-main-mode-map}."
-  (use-local-map mu4e-main-mode-map)
   (setq
     truncate-lines t
     overwrite-mode 'overwrite-mode-binary)
@@ -150,8 +148,7 @@ clicked."
 (defun mu4e~main-view-real-1 (&optional refresh)
   "Create `mu4e~main-buffer-name' and set it up.
 When REFRESH is non nil refresh infos from server."
-  (let ((buf (get-buffer-create mu4e~main-buffer-name))
-        (inhibit-read-only t)
+  (let ((inhibit-read-only t)
         (pos (point)))
     (message "Reverting %s..." mu4e~main-buffer-name)
     ;; Maybe refresh infos from server.
@@ -159,49 +156,47 @@ When REFRESH is non nil refresh infos from server."
       (mu4e~start-1)
       ;; Wait for server update.
       (sit-for 0.1))
-    (with-current-buffer buf
-      (erase-buffer)
-      (insert
-       "* "
-       (propertize "mu4e - mu for emacs version " 'face 'mu4e-title-face)
-       (propertize  mu4e-mu-version 'face 'mu4e-header-key-face)
-       (propertize "; (in store: " 'face 'mu4e-title-face)
-       (propertize (format "%s" (plist-get mu4e~server-props :doccount))
-                   'face 'mu4e-header-key-face)
-       (propertize " messages)" 'face 'mu4e-title-face)
+    (erase-buffer)
+    (insert
+     "* "
+     (propertize "mu4e - mu for emacs version " 'face 'mu4e-title-face)
+     (propertize  mu4e-mu-version 'face 'mu4e-header-key-face)
+     (propertize "; (in store: " 'face 'mu4e-title-face)
+     (propertize (format "%s" (plist-get mu4e~server-props :doccount))
+                 'face 'mu4e-header-key-face)
+     (propertize " messages)" 'face 'mu4e-title-face)
 
-       "\n\n"
-       (propertize "  Basics\n\n" 'face 'mu4e-title-face)
-       (mu4e~main-action-str
-	"\t* [j]ump to some maildir\n" 'mu4e-jump-to-maildir)
-       (mu4e~main-action-str
-	"\t* enter a [s]earch query\n" 'mu4e-search)
-       (mu4e~main-action-str
-	"\t* [C]ompose a new message\n" 'mu4e-compose-new)
-       "\n"
-       (propertize "  Bookmarks\n\n" 'face 'mu4e-title-face)
-       (mu4e~main-bookmarks)
-       "\n\n"
-       (propertize "  Misc\n\n" 'face 'mu4e-title-face)
+     "\n\n"
+     (propertize "  Basics\n\n" 'face 'mu4e-title-face)
+     (mu4e~main-action-str
+      "\t* [j]ump to some maildir\n" 'mu4e-jump-to-maildir)
+     (mu4e~main-action-str
+      "\t* enter a [s]earch query\n" 'mu4e-search)
+     (mu4e~main-action-str
+      "\t* [C]ompose a new message\n" 'mu4e-compose-new)
+     "\n"
+     (propertize "  Bookmarks\n\n" 'face 'mu4e-title-face)
+     (mu4e~main-bookmarks)
+     "\n\n"
+     (propertize "  Misc\n\n" 'face 'mu4e-title-face)
 
-       (mu4e~main-action-str "\t* [;]Switch context\n" 'mu4e-context-switch)
+     (mu4e~main-action-str "\t* [;]Switch context\n" 'mu4e-context-switch)
 
-       (mu4e~main-action-str "\t* [U]pdate email & database\n"
-	                     'mu4e-update-mail-and-index)
+     (mu4e~main-action-str "\t* [U]pdate email & database\n"
+	                   'mu4e-update-mail-and-index)
 
-       ;; show the queue functions if `smtpmail-queue-dir' is defined
-       (if (file-directory-p smtpmail-queue-dir)
-	   (mu4e~main-view-queue)
-	 "")
-       "\n"
-       (mu4e~main-action-str "\t* [N]ews\n" 'mu4e-news)
-       (mu4e~main-action-str "\t* [A]bout mu4e\n" 'mu4e-about)
-       (mu4e~main-action-str "\t* [H]elp\n" 'mu4e-display-manual)
-       (mu4e~main-action-str "\t* [q]uit\n" 'mu4e-quit))
-      (mu4e-main-mode)
-      (goto-char pos)
-      (message "Reverting %s done" mu4e~main-buffer-name)
-      )))
+     ;; show the queue functions if `smtpmail-queue-dir' is defined
+     (if (file-directory-p smtpmail-queue-dir)
+	 (mu4e~main-view-queue)
+       "")
+     "\n"
+     (mu4e~main-action-str "\t* [N]ews\n" 'mu4e-news)
+     (mu4e~main-action-str "\t* [A]bout mu4e\n" 'mu4e-about)
+     (mu4e~main-action-str "\t* [H]elp\n" 'mu4e-display-manual)
+     (mu4e~main-action-str "\t* [q]uit\n" 'mu4e-quit))
+    (goto-char pos)
+    (message "Reverting %s done" mu4e~main-buffer-name)
+    ))
 
 (defun mu4e~main-view-queue ()
   "Display queue-related actions in the main view."
@@ -235,17 +230,20 @@ When REFRESH is non nil refresh infos from server."
   "Create the mu4e main-view, and switch to it.
 
 When REFRESH is non nil refresh infos from server."
-  (if (eq mu4e-split-view 'single-window)
-      (if (buffer-live-p (mu4e-get-headers-buffer))
-	  (switch-to-buffer (mu4e-get-headers-buffer))
-	(mu4e~main-menu))
-    ;; `mu4e~main-view' is called from `mu4e~start', so don't call it
-    ;; a second time here i.e. do not refresh unless specified
-    ;; explicitely with REFRESH arg. 
-    (mu4e~main-view-real-1 refresh)
-    (switch-to-buffer mu4e~main-buffer-name)
-    (goto-char (point-min)))
-  (add-to-list 'global-mode-string '(:eval (mu4e-context-label))))
+  (let ((buf (get-buffer-create mu4e~main-buffer-name)))
+    (if (eq mu4e-split-view 'single-window)
+        (if (buffer-live-p (mu4e-get-headers-buffer))
+	    (switch-to-buffer (mu4e-get-headers-buffer))
+	  (mu4e~main-menu))
+      ;; `mu4e~main-view' is called from `mu4e~start', so don't call it
+      ;; a second time here i.e. do not refresh unless specified
+      ;; explicitely with REFRESH arg. 
+      (switch-to-buffer buf)
+      (with-current-buffer buf
+        (mu4e-main-mode)
+        (mu4e~main-view-real-1 refresh))
+      (goto-char (point-min)))
+  (add-to-list 'global-mode-string '(:eval (mu4e-context-label)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Interactive functions
@@ -260,9 +258,8 @@ When REFRESH is non nil refresh infos from server."
   (message (concat "Outgoing mail will now be "
 		         (if smtpmail-queue-mail "queued" "sent directly")))
   (unless (eq mu4e-split-view 'single-window)
-    (let ((curpos (point)))
-      (mu4e~main-view-real-1)
-      (goto-char curpos))))
+    (with-current-buffer mu4e~main-buffer-name
+      (revert-buffer))))
 
 (defun mu4e~main-menu ()
   "mu4e main view in the minibuffer."

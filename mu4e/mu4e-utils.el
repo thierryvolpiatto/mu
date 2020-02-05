@@ -655,7 +655,8 @@ process."
 	            (mu4e~request-contacts-maybe)
 	            (run-hooks 'mu4e-index-updated-hook))
                   (when (and main-buf (buffer-live-p main-buf))
-                    (mu4e~main-view-real-1 t)))))
+                    (with-current-buffer main-buf
+                      (revert-buffer))))))
       ((plist-get info :message)
 	      (mu4e-index-message "%s" (plist-get info :message))))))
 
