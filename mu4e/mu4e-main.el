@@ -150,7 +150,6 @@ clicked."
 When REFRESH is non nil refresh infos from server."
   (let ((inhibit-read-only t)
         (pos (point)))
-    (message "Reverting %s..." mu4e~main-buffer-name)
     ;; Maybe refresh infos from server.
     (when refresh
       (mu4e~start-1)
@@ -194,9 +193,7 @@ When REFRESH is non nil refresh infos from server."
      (mu4e~main-action-str "\t* [A]bout mu4e\n" 'mu4e-about)
      (mu4e~main-action-str "\t* [H]elp\n" 'mu4e-display-manual)
      (mu4e~main-action-str "\t* [q]uit\n" 'mu4e-quit))
-    (goto-char pos)
-    (message "Reverting %s done" mu4e~main-buffer-name)
-    ))
+    (goto-char pos)))
 
 (defun mu4e~main-view-queue ()
   "Display queue-related actions in the main view."
