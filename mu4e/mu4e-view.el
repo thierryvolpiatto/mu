@@ -380,21 +380,13 @@ article-mode."
   (require 'gnus-art)
   (let ((path (mu4e-message-field msg :path))
         (inhibit-read-only t)
-        ;; support signature verification
-        (mm-verify-option 'known)
-        (mm-decrypt-option 'known)
         (gnus-article-emulate-mime t)
         (gnus-buttonized-mime-types (append (list "multipart/signed"
                                                   "multipart/encrypted")
                                             gnus-buttonized-mime-types)))
     (switch-to-buffer (get-buffer-create mu4e~view-buffer-name))
     (erase-buffer)
-    (insert-file-contents-literally path)
-    (unless (message-fetch-field "Content-Type" t)
-      ;; For example, for messages in `mu4e-drafts-folder'
-      (let ((coding (or (default-value 'buffer-file-coding-system)
-                        'prefer-utf-8)))
-        (recode-region (point-min) (point-max) coding 'no-conversion)))
+    (insert-file-contents path)
     (setq
      gnus-summary-buffer (get-buffer-create " *appease-gnus*")
      gnus-original-article-buffer (current-buffer))
@@ -412,12 +404,14 @@ article-mode."
     (mu4e-view-mode)
     (setq gnus-article-decoded-p gnus-article-decode-hook)
     (set-buffer-modified-p nil)
-    (add-hook 'kill-buffer-hook
-              (lambda() ;; cleanup the mm-* buffers that the view spawns
-                (when mu4e~gnus-article-mime-handles
-                  (mm-destroy-parts mu4e~gnus-article-mime-handles)
-                  (setq mu4e~gnus-article-mime-handles nil))))
+    (add-hook 'kill-buffer-hook #'mu4e~view-kill-buffer-hook-fn)
     (read-only-mode)))
+
+(defun mu4e~view-kill-buffer-hook-fn ()
+  ;; cleanup the mm-* buffers that the view spawns
+  (when mu4e~gnus-article-mime-handles
+    (mm-destroy-parts mu4e~gnus-article-mime-handles)
+    (setq mu4e~gnus-article-mime-handles nil)))
 
 (defun mu4e~view-gnus-display-mime (msg)
   "Same as `gnus-display-mime' but add a mu4e headers to MSG."
