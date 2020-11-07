@@ -24,7 +24,7 @@
 #include <atomic>
 #include <unistd.h>
 
-#include "mu-runtime.h"
+#include "mu-runtime.hh"
 #include "mu-cmd.hh"
 #include "mu-server.hh"
 
@@ -66,10 +66,12 @@ install_sig_handler (void)
 static void
 cookie(size_t n)
 {
+        const auto num{static_cast<unsigned>(n)};
+
         if (tty) // for testing.
-                ::printf ("[%x]", n);
+                ::printf ("[%x]", num);
         else
-                ::printf (COOKIE_PRE "%x" COOKIE_POST, n);
+                ::printf (COOKIE_PRE "%x" COOKIE_POST, num);
 }
 
 static void

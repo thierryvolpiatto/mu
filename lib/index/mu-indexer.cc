@@ -140,8 +140,8 @@ Indexer::Private::handler (const std::string& fullpath, struct stat *statbuf,
         case Scanner::HandleType::File: {
 
                 if ((size_t)statbuf->st_size > max_message_size_) {
-                        g_debug ("skip %s (too big: %zu bytes)",
-                                 fullpath.c_str(), statbuf->st_size);
+                        g_debug ("skip %s (too big: %" G_GINT64_FORMAT " bytes)",
+                                 fullpath.c_str(), (gint64)statbuf->st_size);
                         return false;
                 }
 
@@ -205,7 +205,7 @@ Indexer::Private::cleanup()
         g_debug ("starting cleanup");
 
         std::vector<Store::Id> orphans_; // store messages without files.
-        store_.for_each([&](Store::Id id, const std::string &path) {
+        store_.for_each_message_path([&](Store::Id id, const std::string &path) {
 
                 if (clean_done_)
                         return false;
@@ -242,7 +242,7 @@ Indexer::Private::start(const Indexer::Config& conf)
         else
                 max_workers_ = conf.max_threads;
 
-        g_debug ("starting indexer with up to %zu threads", max_workers_);
+        g_debug ("starting indexer with up to %zu worker threads", max_workers_);
 
         scan_done_ = false;
         workers_.emplace_back(std::thread([this]{worker();}));
@@ -255,13 +255,14 @@ Indexer::Private::start(const Indexer::Config& conf)
                 if (conf_.scan) {
                         g_debug("starting scanner");
 
-                        if (!scanner_.start()) {
+                        const auto started{scanner_.start()};
+                        clean_done_ = scan_done_ = true; // so listeners will stop.
+
+                        if (!started) {
                                 g_warning ("failed to start scanner");
                                 return;
-                        }
-
-                        scan_done_ = true;
-                        g_debug ("scanner finished");
+                        } else
+                                g_debug ("scanner finished");
                 }
 
                 if (conf_.cleanup) {
@@ -314,6 +315,12 @@ Indexer::~Indexer() = default;
 bool
 Indexer::start(const Indexer::Config& conf)
 {
+        const auto mdir{priv_->store_.metadata().root_maildir};
+        if (G_UNLIKELY(access (mdir.c_str(), R_OK) != 0)) {
+                g_critical("'%s' is not readable: %s", mdir.c_str(), strerror (errno));
+                return false;
+        }
+
         std::lock_guard<std::mutex> l(priv_->lock_);
         if (is_running())
                 return true;

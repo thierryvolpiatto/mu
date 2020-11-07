@@ -33,7 +33,7 @@
 #include "mu-msg.h"
 #include "index/mu-indexer.hh"
 #include "mu-store.hh"
-#include "mu-runtime.h"
+#include "mu-runtime.hh"
 
 #include "utils/mu-util.h"
 
@@ -97,6 +97,13 @@ mu_cmd_index (Mu::Store& store, const MuConfig *opts, GError **err)
 				     "the maximum message size must be >= 0");
 		return MU_ERROR;
 	}
+
+        const auto mdir{store.metadata().root_maildir};
+        if (G_UNLIKELY(access (mdir.c_str(), R_OK) != 0)) {
+                mu_util_g_set_error(err, MU_ERROR_FILE,
+                                   "'%s' is not readable: %s", mdir.c_str(), strerror (errno));
+                return MU_ERROR;
+        }
 
         MaybeAnsi col{!opts->nocolor};
         using Color = MaybeAnsi::Color;

@@ -34,7 +34,7 @@
 #include "mu-cmd.hh"
 #include "mu-maildir.h"
 #include "mu-contacts.hh"
-#include "mu-runtime.h"
+#include "mu-runtime.hh"
 #include "mu-flags.h"
 
 #include "utils/mu-util.h"
@@ -643,7 +643,7 @@ cmd_find (const MuConfig *opts, GError **err)
 {
         Mu::Store store{mu_runtime_path(MU_RUNTIME_PATH_XAPIANDB), true/*readonly*/};
 
-        return mu_cmd_find(reinterpret_cast<MuStore*>(&store), opts, err);
+        return mu_cmd_find(store, opts, err);
 }
 
 static void

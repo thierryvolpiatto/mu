@@ -15,7 +15,7 @@
 ## Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 AC_PREREQ([2.68])
-AC_INIT([mu],[1.5.6],[https://github.com/djcb/mu/issues],[mu])
+AC_INIT([mu],[1.5.7],[https://github.com/djcb/mu/issues],[mu])
 AC_COPYRIGHT([Copyright (C) 2008-2020 Dirk-Jan C. Binnema])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_SRCDIR([mu/mu.cc])
@@ -52,12 +52,6 @@ extra_flags="-Wformat-security                                        \
 AX_CXX_COMPILE_STDCXX_14
 m4_ifdef([AX_COMPILER_FLAGS],[AX_COMPILER_FLAGS(,,[yes],${extra_flags})])
 AX_VALGRIND_CHECK
-
-# i.e,., do we hgave -z muldefs?, if not (MacOS), we can't
-# build the guile backend
-AX_CHECK_LINK_FLAG([-z muldefs])dnl
-AM_CONDITIONAL([LD_ALLOW_Z_MULDEF],
-	[test "x$ax_cv_check_ldflags___z_muldefs" = xyes])dnl
 
 LT_INIT
 
@@ -220,23 +214,26 @@ AM_CONDITIONAL(BUILD_GUI,[test "x$have_webkit" = "xyes" -a "x$have_gtk" = "xyes"
 ###############################################################################
 # build with guile 3.0/2.2 when available and not disabled.
 AC_ARG_ENABLE([guile], AS_HELP_STRING([--disable-guile],[Disable guile]))
-AM_COND_IF([LD_ALLOW_Z_MULDEF],[
-  AS_IF([test "x$enable_guile" != "xno"],[
-    PKG_CHECK_MODULES(GUILE, [guile-3.0], [have_guile=yes],[
-      PKG_CHECK_MODULES(GUILE, [guile-2.2], [have_guile=yes], [have_guile=no])])
+AS_IF([test "x$enable_guile" != "xno"],[
+
+  PKG_CHECK_MODULES(GUILE, [guile-3.0], [have_guile=yes],[
+    PKG_CHECK_MODULES(GUILE, [guile-2.2], [have_guile=yes], [have_guile=no])])
+
     AS_IF([test "x$have_guile" = "xyes"],[
       GUILE_PKG([3.0 2.2])
       GUILE_PROGS
       GUILE_FLAGS
       AC_DEFINE_UNQUOTED([GUILE_BINARY],"$GUILE",[guile binary])
       AC_DEFINE(BUILD_GUILE,[1], [Do we support Guile?])
-      AC_SUBST(GUILE_SNARF, [guile-snarf])
+
+      snarf=guile-snarf${GUILE_EFFECTIVE_VERSION}
+      AC_CHECK_PROG(GUILE_SNARF,[${snarf}],[${snarf}], [no])
       guile_version=$($PKG_CONFIG guile-$GUILE_EFFECTIVE_VERSION --modversion)
-    ])
-  ])],[
-  AC_MSG_NOTICE([no muldef support, so no guile atm])
+   ])
 ])
-AM_CONDITIONAL(BUILD_GUILE,[test "x$have_guile" = "xyes"])
+
+AM_CONDITIONAL(BUILD_GUILE,[test "x$have_guile" = "xyes" -a \
+                                 "x$ac_cv_prog_GUILE_SNARF" != "xno"])
 ###############################################################################
 
 ###############################################################################
@@ -265,7 +262,6 @@ mu/mu-memcheck
 lib/Makefile
 lib/doxyfile
 lib/utils/Makefile
-lib/query/Makefile
 lib/index/Makefile
 mu4e/Makefile
 mu4e/mu4e-meta.el

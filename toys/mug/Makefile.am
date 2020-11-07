@@ -1,4 +1,4 @@
-## Copyright (C) 2008-2019 Dirk-Jan C. Binnema <djcb@djcbsoftware.nl>
+## Copyright (C) 2008-2020 Dirk-Jan C. Binnema <djcb@djcbsoftware.nl>
 ##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -43,26 +43,16 @@ AM_CXXFLAGS=$(WARN_CXXFLAGS)
 noinst_PROGRAMS=								\
 	mug
 
-# note, mug.cc is '.cc' only because libmu must explicitly
-# be linked as c++, not c.
 mug_SOURCES=									\
-	mug.c									\
-	mug-msg-list-view.c							\
+	mug.cc									\
+	mug-msg-list-view.cc							\
 	mug-msg-list-view.h							\
 	mug-msg-view.h								\
 	mug-msg-view.c								\
 	mug-query-bar.h								\
 	mug-query-bar.c								\
-	mug-shortcuts.c								\
-	mug-shortcuts.h								\
-	dummy.cc
-
-# we need to use dummy.cc to enforce c++ linking...
-BUILT_SOURCES=									\
-	dummy.cc
-
-dummy.cc:
-	touch dummy.cc
+	mug-shortcuts.cc							\
+	mug-shortcuts.h
 
 DISTCLEANFILES=									\
 	$(BUILT_SOURCES)
@@ -70,6 +60,7 @@ DISTCLEANFILES=									\
 mug_LDADD=									\
 	$(ASAN_LDFLAGS)								\
 	${top_builddir}/lib/libmu.la						\
+	${top_builddir}/lib/utils/libmu-utils.la				\
 	libmuwidgets.la								\
 	${GTK_LIBS}
 
