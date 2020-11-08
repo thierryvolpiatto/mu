@@ -380,6 +380,7 @@ article-mode."
   (require 'gnus-art)
   (let ((path (mu4e-message-field msg :path))
         (inhibit-read-only t)
+        (mm-decrypt-option 'known)
         (gnus-article-emulate-mime t)
         (gnus-buttonized-mime-types (append (list "multipart/signed"
                                                   "multipart/encrypted")
