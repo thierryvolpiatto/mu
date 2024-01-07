@@ -547,6 +547,20 @@ appropriate flag at the message forwarded or replied-to."
   "Function called just after sending a message."
   (setq mu4e-sent-func #'mu4e-sent-handler)
   (mu4e--server-sent (buffer-file-name)))
+
+(defun mu4e-message-kill-buffer ()
+  "Wrapper around `message-kill-buffer'.
+It attempts to restore some mu4e window layout after killing the
+compose-buffer."
+  (interactive)
+  (let ((view (save-selected-window (mu4e-get-view-buffer)))
+        (hdrs (mu4e-get-headers-buffer)))
+    (message-kill-buffer)
+    ;; try to go back to some mu window if it is live; otherwise do nothing.
+    (if (buffer-live-p view)
+        (switch-to-buffer view)
+      (when (and (buffer-live-p hdrs))
+        (switch-to-buffer hdrs)))))
 
 ;;; Crypto
 (defun mu4e--compose-setup-crypto (parent compose-type)
@@ -610,7 +624,7 @@ buffers; lets remap its faces so it uses the ones for mu4e."
     (define-key map (kbd "C-S-u")    #'mu4e-update-mail-and-index)
     (define-key map (kbd "C-c C-u")  #'mu4e-update-mail-and-index)
     (define-key map (kbd "C-c ;")    #'mu4e-compose-context-switch)
-
+    (define-key map (kbd "C-c C-k")  #'mu4e-message-kill-buffer)
     ;; emacs 29
     ;;(keymap-set map "<remap> <beginning-of-buffer>" #'mu4e-compose-goto-top)
     ;;(keymap-set map "<remap> <end-of-buffer>" #'mu4e-compose-goto-bottom)
@@ -852,6 +866,11 @@ replied to or forwarded, etc."
   (set-buffer-modified-p nil)
   (undo-boundary))
 
+;; FIXME: Something is already trying to restore the underlaying windows/frames
+;; that were here before starting composing Mail but fails to do so.  As a
+;; workaround we save the frame config before composing and then restore it
+;; through `message-send-actions' but a better fix would be to fix previous
+;; attempt to restore initial window/frame config.
 (defun mu4e--compose-setup (compose-type compose-func &optional switch)
   "Set up a new buffer for mu4e message composition.
 
@@ -873,28 +892,22 @@ Returns the new buffer."
             (mu4e-message-at-point)))
          (mu4e-compose-parent-message parent)
          (mu4e-compose-type compose-type)
-         (oldframe (selected-frame)))
+         (winconf (current-frame-configuration))
+         (restore-winconf (lambda () (set-frame-configuration winconf)))
+         (actions (append (list restore-winconf) message-send-actions))
+         (buf (mu4e--compose-setup-buffer compose-type compose-func parent)))
     (advice-add 'message-is-yours-p :around #'mu4e--message-is-yours-p)
     (run-hooks 'mu4e-compose-pre-hook) ;; run the pre-hook. Still useful?
     (mu4e--context-autoswitch parent mu4e-compose-context-policy)
-    (with-current-buffer
-        (mu4e--compose-setup-buffer compose-type compose-func parent)
+    (with-current-buffer buf
+      (funcall (or switch (mu4e--compose-switch-function)) (current-buffer))
       (unless (eq compose-type 'edit)
         (set-visited-file-name ;; make it a draft file
          (mu4e--draft-message-path (mu4e--message-basename) parent)))
       (mu4e--compose-setup-post compose-type parent)
-      (funcall (or switch (mu4e--compose-switch-function)) (current-buffer))
-      (let* ((msgframe (selected-frame))
-             (actions (list
-                       (lambda () ;; kill frame when it was created for this
-                         (unless (eq oldframe msgframe)
-                           (delete-frame msgframe))))))
-        ;; handle closing of frames.
-        (setq-local ;;message-kill-actions actions
-         message-return-actions actions
-         message-send-actions actions
-         message-kill-actions actions))
-      (current-buffer))))
+      ;; handle closing of frames.
+      (setq-local message-send-actions actions))
+    (switch-to-buffer buf)))
 
 
 ;;;###autoload
@@ -1012,7 +1025,7 @@ The message is resent as-is, without any editing."
 (define-mail-user-agent 'mu4e-user-agent
   #'mu4e-compose-mail
   #'message-send-and-exit
-  #'message-kill-buffer
+  nil
   'message-send-hook)
 
 ;; Without this, `mail-user-agent' cannot be set to `mu4e-user-agent'
